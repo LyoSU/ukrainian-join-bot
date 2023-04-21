@@ -43,20 +43,6 @@ bot.on('chat_join_request', async (ctx) => {
   if (ctx.update.chat_join_request.from.language_code === 'uk') {
     await ctx.approveChatJoinRequest(ctx.update.chat_join_request.from.id)
   } else {
-    let joinLink = 'https://t.me/'
-    if (ctx.chat.username) {
-      joinLink = `https://t.me/${ctx.chat.username}`
-    } else {
-      const chatInviteLink = await ctx.api.createChatInviteLink(ctx.chat.id, {
-        expire_date: new Date().getTime() / 1000 + 60 * 60, // 1 hour
-        creates_join_request: true
-      }).catch(() => null)
-
-      if (chatInviteLink?.invite_link) {
-        joinLink = chatInviteLink.invite_link
-      }
-    }
-
     await ctx.api.sendMessage(ctx.update.chat_join_request.from.id, `Вітаю, ${escapeHTMLEntities(ctx.update.chat_join_request.from.first_name)}!\nЯ приймаю заявки лише від україномовних користувачів.`, {
       reply_markup: {
         inline_keyboard: [
@@ -68,12 +54,39 @@ bot.on('chat_join_request', async (ctx) => {
           ], [
             {
               text: '+ Долучитись до чату',
-              url: joinLink
+              callback_data: `join_chat:${ctx.update.chat_join_request.chat.id}`
             }
           ]
         ]
       }
     })
+  }
+})
+
+bot.callbackQuery(/^join_chat:(.*)$/, async (ctx) => {
+  // if uk language, then approve
+  if (ctx.from.language_code === 'uk') {
+    const chat = await ctx.api.getChat(parseInt(ctx.match[1]))
+
+    await ctx.api.approveChatJoinRequest(parseInt(ctx.match[1]), ctx.from.id).catch((err) => {
+      if (err.description.includes('USER_ALREADY_PARTICIPANT')) {
+        return ctx.answerCallbackQuery({
+          text: `Ви вже є учасником чату «${escapeHTMLEntities(chat.title)}» 🤗`,
+          show_alert: true
+        })
+      } else {
+        return ctx.answerCallbackQuery({
+          text: 'Вибачте, сталася помилка 😔',
+          show_alert: true
+        })
+      }
+    })
+    await ctx.answerCallbackQuery({
+      text: `Дякуюємо, вас додано до чату «${escapeHTMLEntities(chat.title)}» 🤗`,
+      show_alert: true
+    })
+  } else {
+    await ctx.answerCallbackQuery('Вибачте, я приймаю заявки лише від україномовних користувачів.')
   }
 })
 

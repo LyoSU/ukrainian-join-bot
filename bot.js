@@ -2,7 +2,7 @@ const { Bot, GrammyError, HttpError } = require('grammy')
 
 const bot = new Bot(process.env.BOT_TOKEN)
 
-function escapeHTMLEntities(text) {
+function escapeHTMLEntities (text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
@@ -40,9 +40,23 @@ bot.use(async (ctx, next) => {
 // chat join request handler
 bot.on('chat_join_request', async (ctx) => {
   // approve only if user's language is Ukrainian
-  if (ctx.update.chat_join_request.from.language_code === 'uk') {
+  if (ctx.update.chat_join_request.from.language_code === 'suk') {
     await ctx.approveChatJoinRequest(ctx.update.chat_join_request.from.id)
   } else {
+    let joinLink = 'https://t.me/'
+    if (ctx.chat.username) {
+      joinLink = `https://t.me/${ctx.chat.username}`
+    } else {
+      const chatInviteLink = await ctx.api.createChatInviteLink(ctx.chat.id, {
+        expire_date: new Date().getTime() / 1000 + 60 * 60, // 1 hour
+        creates_join_request: true
+      }).catch(() => null)
+
+      if (chatInviteLink?.invite_link) {
+        joinLink = chatInviteLink.invite_link
+      }
+    }
+
     await ctx.api.sendMessage(ctx.update.chat_join_request.from.id, `Вітаю, ${escapeHTMLEntities(ctx.update.chat_join_request.from.first_name)}!\nЯ приймаю заявки лише від україномовних користувачів.`, {
       reply_markup: {
         inline_keyboard: [
@@ -50,6 +64,11 @@ bot.on('chat_join_request', async (ctx) => {
             {
               text: '🇺🇦 Українізувати Telegram',
               url: 'https://t.me/setlanguage/uk'
+            }
+          ], [
+            {
+              text: '+ Долучитись до чату',
+              url: joinLink
             }
           ]
         ]

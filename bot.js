@@ -2,6 +2,10 @@ const { Bot, GrammyError, HttpError } = require('grammy')
 
 const bot = new Bot(process.env.BOT_TOKEN)
 
+function escapeHTMLEntities(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 bot.catch(async (err) => {
   const ctx = err.ctx
   console.error(`Error while handling update ${ctx.update.update_id}:`)
@@ -38,6 +42,19 @@ bot.on('chat_join_request', async (ctx) => {
   // approve only if user's language is Ukrainian
   if (ctx.update.chat_join_request.from.language_code === 'uk') {
     await ctx.approveChatJoinRequest(ctx.update.chat_join_request.from.id)
+  } else {
+    await ctx.api.sendMessage(ctx.update.chat_join_request.from.id, `Вітаю, ${escapeHTMLEntities(ctx.update.chat_join_request.from.first_name)}!\nЯ приймаю заявки лише від україномовних користувачів.`, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '🇺🇦 Українізувати Telegram',
+              url: 'https://t.me/setlanguage/uk'
+            }
+          ]
+        ]
+      }
+    })
   }
 })
 
@@ -45,7 +62,7 @@ bot.on('chat_join_request', async (ctx) => {
 bot.command('start', async (ctx, next) => {
   if (ctx.chat.type !== 'private') return next()
 
-  await ctx.reply(`Вітаю, ${ctx.from.first_name}!\nЯ приймаю заявки лише від україномовних користувачів.\nДодайте мене в групу і надайте права адміністратора, щоб я міг працювати.`, {
+  await ctx.reply(`Вітаю, ${escapeHTMLEntities(ctx.from.first_name)}!\nЯ приймаю заявки лише від україномовних користувачів.\nДодайте мене в групу і надайте права адміністратора, щоб я міг працювати.`, {
     reply_markup: {
       inline_keyboard: [
         [

@@ -40,7 +40,7 @@ bot.use(async (ctx, next) => {
 // chat join request handler
 bot.on('chat_join_request', async (ctx) => {
   // approve only if user's language is Ukrainian
-  if (ctx.update.chat_join_request.from.language_code === 'suk') {
+  if (ctx.update.chat_join_request.from.language_code === 'uk') {
     await ctx.approveChatJoinRequest(ctx.update.chat_join_request.from.id)
   } else {
     let joinLink = 'https://t.me/'

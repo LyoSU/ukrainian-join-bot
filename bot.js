@@ -59,6 +59,13 @@ bot.on('chat_join_request', async (ctx) => {
           ]
         ]
       }
+    }).catch((err) => {
+      if (err.description.includes('bot was blocked by the user')) {
+        console.log(`User ${ctx.update.chat_join_request.from.id} blocked the bot`)
+      } else {
+        console.error(err)
+        ctx.reply('Вибачте, сталася помилка 😔')
+      }
     })
   }
 })
